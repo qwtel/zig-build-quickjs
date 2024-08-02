@@ -67,15 +67,27 @@ pub fn build(b: *std.Build) !void {
     });
     lib.linkLibC();
 
-    lib.defineCMacro("_GNU_SOURCE", "1");
+    lib.defineCMacro("_GNU_SOURCE", "1"); // XXX: can we just set that optimistically?
     if (target.result.os.tag == .windows) {
         lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
         lib.defineCMacro("_WIN32_WINNT", "0x0602");
+        if (target.result.abi != .msvc) {
+            lib.defineCMacro("_MSC_VER", "1900"); // HACK: Setting fake MSC version to trigger the right code paths in cutils
+            lib.linkSystemLibrary("kernel32"); // XXX: why does this not work when abi is msvc?
+        } else { // abi == .msvc
+            // TODO: make this work
+        }
+    }
+
+    if (target.result.os.tag != .windows and target.result.os.tag != .wasi) {
+        lib.linkSystemLibrary("pthread");
     }
 
     if (mode == .Debug) {
         lib.defineCMacro("DUMP_LEAKS", "1");
     }
+
+    lib.installHeadersDirectory(b.path("."), "", .{});
 
     b.installArtifact(lib);
 }
