@@ -25,16 +25,15 @@ pub fn build(b: *std.Build) !void {
         "-fno-sanitize=undefined",
     };
 
-    // if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
-    //     add_compile_definitions(
-    //         _WASI_EMULATED_PROCESS_CLOCKS
-    //         _WASI_EMULATED_SIGNAL
-    //     )
-    //     add_link_options(
-    //         -lwasi-emulated-process-clocks
-    //         -lwasi-emulated-signal
-    //     )
-    // endif()
+    if (target.result.os.tag == .wasi) {
+        lib.defineCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "1");
+        lib.defineCMacro("_WASI_EMULATED_SIGNAL", "1");
+        // XXX: Zig build doesn't have a way to set link options (afaik)
+        // add_link_options(
+        //     -lwasi-emulated-process-clocks
+        //     -lwasi-emulated-signal
+        // )
+    }
 
     var flags = common_flags;
     if (mode == .Debug) {
@@ -67,16 +66,11 @@ pub fn build(b: *std.Build) !void {
     });
     lib.linkLibC();
 
-    lib.defineCMacro("_GNU_SOURCE", "1"); // XXX: can we just set that optimistically?
+    lib.defineCMacro("_GNU_SOURCE", "1");
     if (target.result.os.tag == .windows) {
         lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
         lib.defineCMacro("_WIN32_WINNT", "0x0602");
-        if (target.result.abi != .msvc) {
-            lib.defineCMacro("_MSC_VER", "1900"); // HACK: Setting fake MSC version to trigger the right code paths in cutils
-            lib.linkSystemLibrary("kernel32"); // XXX: why does this not work when abi is msvc?
-        } else { // abi == .msvc
-            // TODO: make this work
-        }
+        lib.defineCMacro("_MSC_VER", "1900"); // XXX: Necessary to set fake MSC version to trigger the right code paths in cutils
     }
 
     if (target.result.os.tag != .windows and target.result.os.tag != .wasi) {
