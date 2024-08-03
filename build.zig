@@ -69,8 +69,7 @@ pub fn build(b: *std.Build) !void {
     lib.defineCMacro("_GNU_SOURCE", "1");
     if (target.result.os.tag == .windows) {
         lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
-        lib.defineCMacro("_WIN32_WINNT", "0x0602");
-        lib.defineCMacro("_MSC_VER", "1900"); // XXX: Necessary to set fake MSC version to trigger the right code paths in cutils
+        lib.defineCMacro("_WIN32_WINNT", "0x0602"); // ???
     }
 
     if (target.result.os.tag != .windows and target.result.os.tag != .wasi) {
