@@ -5,7 +5,9 @@
 build/
 unicode/
 test262_*.txt
+.vs
 .idea
 cmake-*
 .zig-cache
 zig-out
+out
