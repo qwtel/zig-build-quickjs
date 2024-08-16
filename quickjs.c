@@ -2667,6 +2667,11 @@ static BOOL JS_AtomIsString(JSContext *ctx, JSAtom v)
     return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
 }
 
+BOOL _JS_AtomIsString(JSContext *ctx, JSAtom v)
+{
+    return JS_AtomIsString(ctx, v);
+}
+
 static JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p)
 {
     uint32_t i = p->hash_next;  /* atom_index */
