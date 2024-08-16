@@ -1228,9 +1228,9 @@ static void js_free_shape_null(JSRuntime *rt, JSShape *sh);
 static int js_shape_prepare_update(JSContext *ctx, JSObject *p,
                                    JSShapeProperty **pprs);
 static int init_shape_hash(JSRuntime *rt);
-static __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValue obj);
-static __exception int js_get_length64(JSContext *ctx, int64_t *pres,
+__exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                        JSValue obj);
 static void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 static JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
@@ -36861,7 +36861,7 @@ static JSValue js_function_constructor(JSContext *ctx, JSValue new_target,
     return JS_EXCEPTION;
 }
 
-static __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValue obj)
 {
     JSValue len_val;
@@ -36873,7 +36873,7 @@ static __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
     return JS_ToUint32Free(ctx, pres, len_val);
 }
 
-static __exception int js_get_length64(JSContext *ctx, int64_t *pres,
+__exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                        JSValue obj)
 {
     JSValue len_val;
@@ -45411,7 +45411,7 @@ static JSValue map_normalize_key(JSContext *ctx, JSValue key)
 }
 
 /* XXX: better hash ? */
-static uint32_t map_hash_key(JSContext *ctx, JSValue key)
+uint32_t map_hash_key(JSContext *ctx, JSValue key)
 {
     uint32_t tag = JS_VALUE_GET_NORM_TAG(key);
     uint32_t h;
