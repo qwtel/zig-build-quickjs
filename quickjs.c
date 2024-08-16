@@ -1616,6 +1616,11 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 
+BOOL _js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+{
+    return js_check_stack_overflow(rt, alloca_size);
+}
+
 JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
 {
     JSRuntime *rt;
