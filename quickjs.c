@@ -6480,6 +6480,7 @@ static void build_backtrace(JSContext *ctx, JSValue error_obj,
             js_new_callsite_data2(ctx, &csd[i++], filename, line_num, col_num);
     } else {
         js_dbuf_init(ctx, &dbuf);
+        dbuf_printf(&dbuf, "Error at\n");
         if (stack_trace_limit == 0)
             goto done;
         if (filename) {
