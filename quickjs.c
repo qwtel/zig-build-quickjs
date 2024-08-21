@@ -1108,7 +1108,7 @@ static int JS_ToBoolFree(JSContext *ctx, JSValue val);
 static int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 static int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val);
 static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
-static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
 static JSValue js_compile_regexp(JSContext *ctx, JSValue pattern,
                                  JSValue flags);
 static JSValue js_regexp_constructor_internal(JSContext *ctx, JSValue ctor,
@@ -1900,7 +1900,7 @@ static JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char
     return str;
 }
 
-static JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
+JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
 {
     JSString *p;
     p = js_alloc_string_rt(ctx->rt, max_len, is_wide_char);
@@ -3460,7 +3460,7 @@ int JS_NewClass(JSRuntime *rt, JSClassID class_id, const JSClassDef *class_def)
 
 // XXX: `buf` contains raw 8-bit data, no UTF-8 decoding is performed
 // XXX: no special case for len == 0
-static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
 {
     JSString *str;
     str = js_alloc_string(ctx, len, 0);
@@ -3478,7 +3478,7 @@ static inline JSValue js_new_string8(JSContext *ctx, const char *str)
     return js_new_string8_len(ctx, str, strlen(str));
 }
 
-static JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
+JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
 {
     JSString *str;
     str = js_alloc_string(ctx, len, 1);
