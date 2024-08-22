@@ -1130,7 +1130,7 @@ static BOOL js_strict_eq2(JSContext *ctx, JSValue op1, JSValue op2,
 static BOOL js_strict_eq(JSContext *ctx, JSValue op1, JSValue op2);
 static BOOL js_same_value(JSContext *ctx, JSValue op1, JSValue op2);
 static BOOL js_same_value_zero(JSContext *ctx, JSValue op1, JSValue op2);
-static JSValue JS_ToObject(JSContext *ctx, JSValue val);
+JSValue JS_ToObject(JSContext *ctx, JSValue val);
 static JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 static JSProperty *add_property(JSContext *ctx,
                                 JSObject *p, JSAtom prop, int prop_flags);
@@ -10168,7 +10168,7 @@ static double js_strtod(const char *str, int radix, BOOL is_float)
     return d;
 }
 
-static JSValue js_string_to_bigint(JSContext *ctx, const char *buf, int radix)
+JSValue js_string_to_bigint(JSContext *ctx, const char *buf, int radix)
 {
     bf_t *a;
     int ret;
@@ -35537,7 +35537,7 @@ static JSValue js_global_queueMicrotask(JSContext *ctx, JSValue this_val,
 
 /* Object class */
 
-static JSValue JS_ToObject(JSContext *ctx, JSValue val)
+JSValue JS_ToObject(JSContext *ctx, JSValue val)
 {
     int tag = JS_VALUE_GET_NORM_TAG(val);
     JSValue obj;
