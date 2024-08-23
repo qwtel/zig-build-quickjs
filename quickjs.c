@@ -1169,7 +1169,7 @@ static JSValue js_array_buffer_constructor3(JSContext *ctx,
                                             JSFreeArrayBufferDataFunc *free_func,
                                             void *opaque, BOOL alloc_flag);
 static JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValue obj);
-static JSValue js_typed_array_constructor(JSContext *ctx,
+JSValue js_typed_array_constructor(JSContext *ctx,
                                           JSValue this_val,
                                           int argc, JSValue *argv,
                                           int classid);
@@ -51561,7 +51561,7 @@ static JSValue js_typed_array_constructor_ta(JSContext *ctx,
     return JS_EXCEPTION;
 }
 
-static JSValue js_typed_array_constructor(JSContext *ctx,
+JSValue js_typed_array_constructor(JSContext *ctx,
                                           JSValue new_target,
                                           int argc, JSValue *argv,
                                           int classid)
