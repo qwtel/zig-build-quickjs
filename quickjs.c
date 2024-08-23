@@ -51654,7 +51654,7 @@ static void js_typed_array_mark(JSRuntime *rt, JSValue val,
     }
 }
 
-static JSValue js_dataview_constructor(JSContext *ctx,
+JSValue js_dataview_constructor(JSContext *ctx,
                                        JSValue new_target,
                                        int argc, JSValue *argv)
 {

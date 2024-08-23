@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (mode == .Debug) {
-        lib.defineCMacro("DUMP_LEAKS", "1");
+        lib.defineCMacro("DUMP_LEAKS", "0x4000");
     }
 
     lib.installHeadersDirectory(b.path("."), "", .{});
