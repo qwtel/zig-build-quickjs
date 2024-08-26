@@ -594,43 +594,43 @@ JS_EXTERN JSValue __js_printf_like(2, 3) JS_ThrowInternalError(JSContext *ctx, c
 JS_EXTERN JSValue JS_ThrowOutOfMemory(JSContext *ctx);
 
 JS_EXTERN void __JS_FreeValue(JSContext *ctx, JSValue v);
-static inline void JS_FreeValue(JSContext *ctx, JSValue v)
-{
-    if (JS_VALUE_HAS_REF_COUNT(v)) {
-        JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-        if (--p->ref_count <= 0) {
-            __JS_FreeValue(ctx, v);
-        }
-    }
-}
+JS_EXTERN void JS_FreeValue(JSContext *ctx, JSValue v);
+// {
+//     if (JS_VALUE_HAS_REF_COUNT(v)) {
+//         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+//         if (--p->ref_count <= 0) {
+//             __JS_FreeValue(ctx, v);
+//         }
+//     }
+// }
 JS_EXTERN void __JS_FreeValueRT(JSRuntime *rt, JSValue v);
-static inline void JS_FreeValueRT(JSRuntime *rt, JSValue v)
-{
-    if (JS_VALUE_HAS_REF_COUNT(v)) {
-        JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-        if (--p->ref_count <= 0) {
-            __JS_FreeValueRT(rt, v);
-        }
-    }
-}
+JS_EXTERN void JS_FreeValueRT(JSRuntime *rt, JSValue v);
+// {
+//     if (JS_VALUE_HAS_REF_COUNT(v)) {
+//         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+//         if (--p->ref_count <= 0) {
+//             __JS_FreeValueRT(rt, v);
+//         }
+//     }
+// }
 
-static inline JSValue JS_DupValue(JSContext *ctx, JSValue v)
-{
-    if (JS_VALUE_HAS_REF_COUNT(v)) {
-        JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-        p->ref_count++;
-    }
-    return v;
-}
+JS_EXTERN JSValue JS_DupValue(JSContext *ctx, JSValue v);
+// {
+//     if (JS_VALUE_HAS_REF_COUNT(v)) {
+//         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+//         p->ref_count++;
+//     }
+//     return v;
+// }
 
-static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValue v)
-{
-    if (JS_VALUE_HAS_REF_COUNT(v)) {
-        JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-        p->ref_count++;
-    }
-    return v;
-}
+JS_EXTERN JSValue JS_DupValueRT(JSRuntime *rt, JSValue v);
+// {
+//     if (JS_VALUE_HAS_REF_COUNT(v)) {
+//         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+//         p->ref_count++;
+//     }
+//     return v;
+// }
 
 JS_EXTERN int JS_ToBool(JSContext *ctx, JSValue val); /* return -1 for JS_EXCEPTION */
 JS_EXTERN int JS_ToInt32(JSContext *ctx, int32_t *pres, JSValue val);
