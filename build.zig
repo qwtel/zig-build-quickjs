@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) !void {
         "-Wno-unused-but-set-variable",
         "-Wno-array-bounds",
         "-Wno-format-truncation",
+        "-Wno-format-zero-length",
         "-funsigned-char",
         "-fno-sanitize=undefined",
     };

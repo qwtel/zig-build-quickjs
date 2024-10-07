@@ -106,10 +106,13 @@ jobs:
           elif [ "${{ matrix.config.configType }}" = "shared" ]; then
             echo "BUILD_SHARED_LIBS=ON" >> $GITHUB_ENV;
           elif [ "${{ matrix.config.configType }}" = "asan" ]; then
+            echo "BUILD_TYPE=RelWithDebInfo" >> $GITHUB_ENV;
             echo "CONFIG_ASAN=ON" >> $GITHUB_ENV;
           elif [ "${{ matrix.config.configType }}" = "ubsan" ]; then
+            echo "BUILD_TYPE=RelWithDebInfo" >> $GITHUB_ENV;
             echo "CONFIG_UBSAN=ON" >> $GITHUB_ENV;
           elif [ "${{ matrix.config.configType }}" = "msan" ]; then
+            echo "BUILD_TYPE=RelWithDebInfo" >> $GITHUB_ENV;
             echo "CONFIG_MSAN=ON" >> $GITHUB_ENV;
             echo "CC=clang" >> $GITHUB_ENV;
           fi
@@ -139,7 +142,6 @@ jobs:
         run: |
           cp build/fib.so examples/
           cp build/point.so examples/
-          cp build/bjson.so tests/
           ./build/qjs examples/test_fib.js
           ./build/qjs examples/test_point.js
           ./build/qjs tests/test_bjson.js
@@ -149,11 +151,6 @@ jobs:
         if: ${{ matrix.config.runTest262 }}
         run: |
           time make test262
-
-      - name: test v8 mjsunit
-        if: ${{ matrix.config.runV8 }}
-        run: |
-          ./v8.sh
 
   linux-gcc48:
     runs-on: ubuntu-latest
@@ -198,15 +195,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{matrix.arch}}
+          cmake -B build -DBUILD_EXAMPLES=ON -G "Visual Studio 17 2022" -A ${{matrix.arch}}
           cmake --build build --config ${{matrix.buildType}} --target qjs_exe
           cmake --build build --config ${{matrix.buildType}} --target function_source
+          cmake --build build --config ${{matrix.buildType}} --target fib
+          cmake --build build --config ${{matrix.buildType}} --target point
       - name: stats
         run: |
           build\${{matrix.buildType}}\qjs.exe -qd
       - name: test
         run: |
+          cp build\${{matrix.buildType}}\fib.dll examples\
+          cp build\${{matrix.buildType}}\point.dll examples\
+          build\${{matrix.buildType}}\qjs.exe examples\test_fib.js
+          build\${{matrix.buildType}}\qjs.exe examples\test_point.js
           build\${{matrix.buildType}}\qjs.exe tests\test_bigint.js
+          build\${{matrix.buildType}}\qjs.exe tests\test_bjson.js
           build\${{matrix.buildType}}\qjs.exe tests\test_closure.js
           build\${{matrix.buildType}}\qjs.exe tests\test_language.js
           build\${{matrix.buildType}}\qjs.exe tests\test_builtin.js
@@ -214,6 +218,7 @@ jobs:
           build\${{matrix.buildType}}\qjs.exe tests\test_std.js
           build\${{matrix.buildType}}\qjs.exe tests\test_worker.js
           build\${{matrix.buildType}}\qjs.exe tests\test_queue_microtask.js
+          build\${{matrix.buildType}}\qjs.exe tests\test_module_detect.js
           build\${{matrix.buildType}}\function_source.exe
 
   windows-clang:
@@ -226,15 +231,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -T ClangCL
+          cmake -B build -DBUILD_EXAMPLES=ON -G "Visual Studio 17 2022" -T ClangCL
           cmake --build build --config ${{matrix.buildType}} --target qjs_exe
           cmake --build build --config ${{matrix.buildType}} --target function_source
+          cmake --build build --config ${{matrix.buildType}} --target fib
+          cmake --build build --config ${{matrix.buildType}} --target point
       - name: stats
         run: |
           build\${{matrix.buildType}}\qjs.exe -qd
       - name: test
         run: |
+          cp build\${{matrix.buildType}}\fib.dll examples\
+          cp build\${{matrix.buildType}}\point.dll examples\
+          build\${{matrix.buildType}}\qjs.exe examples\test_fib.js
+          build\${{matrix.buildType}}\qjs.exe examples\test_point.js
           build\${{matrix.buildType}}\qjs.exe tests\test_bigint.js
+          build\${{matrix.buildType}}\qjs.exe tests\test_bjson.js
           build\${{matrix.buildType}}\qjs.exe tests\test_closure.js
           build\${{matrix.buildType}}\qjs.exe tests\test_language.js
           build\${{matrix.buildType}}\qjs.exe tests\test_builtin.js
@@ -242,6 +254,7 @@ jobs:
           build\${{matrix.buildType}}\qjs.exe tests\test_std.js
           build\${{matrix.buildType}}\qjs.exe tests\test_worker.js
           build\${{matrix.buildType}}\qjs.exe tests\test_queue_microtask.js
+          build\${{matrix.buildType}}\qjs.exe tests\test_module_detect.js
           build\${{matrix.buildType}}\function_source.exe
 
   windows-ninja:
@@ -258,15 +271,22 @@ jobs:
           ninja.exe --version
       - name: build
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{matrix.buildType}} -G "Ninja"
+          cmake -B build -DBUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=${{matrix.buildType}} -G "Ninja"
           cmake --build build --target qjs_exe
           cmake --build build --target function_source
+          cmake --build build --target fib
+          cmake --build build --target point
       - name: stats
         run: |
           build\qjs.exe -qd
       - name: test
         run: |
+          cp build\fib.dll examples\
+          cp build\point.dll examples\
+          build\qjs.exe examples\test_fib.js
+          build\qjs.exe examples\test_point.js
           build\qjs.exe tests\test_bigint.js
+          build\qjs.exe tests\test_bjson.js
           build\qjs.exe tests\test_closure.js
           build\qjs.exe tests\test_language.js
           build\qjs.exe tests\test_builtin.js
@@ -274,6 +294,7 @@ jobs:
           build\qjs.exe tests\test_std.js
           build\qjs.exe tests\test_worker.js
           build\qjs.exe tests\test_queue_microtask.js
+          build\qjs.exe tests\test_module_detect.js
           build\function_source.exe
 
   windows-mingw:
@@ -463,3 +484,37 @@ jobs:
         run: |
           cmake --build build --config Release --target qjs
           ls -lh build
+
+  mimalloc-linux:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_CLI_WITH_MIMALLOC: ON
+      MIMALLOC_SHOW_STATS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - name: install dependencies
+        run: |
+          sudo apt update && sudo apt -y install libmimalloc-dev
+      - name: build
+        run: |
+          make
+      - name: test
+        run: |
+          make test
+
+  mimalloc-macos:
+    runs-on: macos-latest
+    env:
+      BUILD_CLI_WITH_STATIC_MIMALLOC: ON
+      MIMALLOC_SHOW_STATS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - name: install dependencies
+        run: |
+          brew install mimalloc
+      - name: build
+        run: |
+          make
+      - name: test
+        run: |
+          make test
