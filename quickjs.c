@@ -4262,12 +4262,12 @@ uint32_t _js_string_get_len(const JSString *p)
     return p->len;
 }
 
-uint8_t *_js_string_get_str8(const JSString *p)
+uint8_t const*_js_string_get_str8(const JSString *p)
 {
     return p->u.str8;
 }
 
-uint16_t *_js_string_get_str16(const JSString *p)
+uint16_t const*_js_string_get_str16(const JSString *p)
 {
     return p->u.str16;
 }
