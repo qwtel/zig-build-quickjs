@@ -1249,7 +1249,7 @@ static __exception int js_set_length64(JSContext *ctx, JSValue obj,
 static void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 static JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
                                JSValue array_arg);
-static BOOL js_get_fast_array(JSContext *ctx, JSValue obj,
+BOOL js_get_fast_array(JSContext *ctx, JSValue obj,
                               JSValue **arrpp, uint32_t *countp);
 static JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
                                               JSValue sync_iter);
@@ -1758,9 +1758,9 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 
-BOOL JS_CheckStackOverflow(JSRuntime *rt, size_t alloca_size)
+BOOL JS_CheckStackOverflow(JSContext *ctx, size_t alloca_size)
 {
-    return js_check_stack_overflow(rt, alloca_size);
+    return js_check_stack_overflow(ctx->rt, alloca_size);
 }
 
 JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
@@ -4251,6 +4251,27 @@ static void copy_str16(uint16_t *dst, const JSString *p, int offset, int len)
     }
 }
 
+
+int _js_string_is_wide_char(const JSString *p)
+{
+    return p->is_wide_char;
+}
+
+uint32_t _js_string_get_len(const JSString *p)
+{
+    return p->len;
+}
+
+uint8_t *_js_string_get_str8(const JSString *p)
+{
+    return p->u.str8;
+}
+
+uint16_t *_js_string_get_str16(const JSString *p)
+{
+    return p->u.str16;
+}
+
 static JSValue JS_ConcatString1(JSContext *ctx,
                                 const JSString *p1, const JSString *p2)
 {
@@ -4971,6 +4992,26 @@ static int JS_SetObjectData(JSContext *ctx, JSValue obj, JSValue val)
     if (!JS_IsException(obj))
         JS_ThrowTypeError(ctx, "invalid object type");
     return -1;
+}
+
+BOOL _JS_GetObjectData(JSContext *ctx, JSValue obj, JSValue *pval)
+{
+    JSObject *p;
+
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
+        p = JS_VALUE_GET_OBJ(obj);
+        switch(p->class_id) {
+        case JS_CLASS_NUMBER:
+        case JS_CLASS_STRING:
+        case JS_CLASS_BOOLEAN:
+        case JS_CLASS_SYMBOL:
+        case JS_CLASS_DATE:
+        case JS_CLASS_BIG_INT:
+            *pval = js_dup(p->u.object_data);
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 JSValue JS_NewObjectClass(JSContext *ctx, int class_id)
@@ -6729,8 +6770,7 @@ JSValue JS_NewError(JSContext *ctx)
     return JS_NewObjectClass(ctx, JS_CLASS_ERROR);
 }
 
-static JSValue JS_MakeError(JSContext *ctx, JSErrorEnum error_num,
-                            const char *message, BOOL add_backtrace)
+JSValue JS_MakeError(JSContext *ctx, JSErrorEnum error_num, const char *message, BOOL add_backtrace)
 {
     JSValue obj, msg;
 
@@ -14056,7 +14096,7 @@ static JSValue js_array_iterator_next(JSContext *ctx, JSValue this_val,
 static JSValue js_create_array_iterator(JSContext *ctx, JSValue this_val,
                                         int argc, JSValue *argv, int magic);
 
-static BOOL js_is_fast_array(JSContext *ctx, JSValue obj)
+BOOL js_is_fast_array(JSContext *ctx, JSValue obj)
 {
     /* Try and handle fast arrays explicitly */
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
@@ -14069,8 +14109,7 @@ static BOOL js_is_fast_array(JSContext *ctx, JSValue obj)
 }
 
 /* Access an Array's internal JSValue array if available */
-static BOOL js_get_fast_array(JSContext *ctx, JSValue obj,
-                              JSValue **arrpp, uint32_t *countp)
+BOOL js_get_fast_array(JSContext *ctx, JSValue obj, JSValue **arrpp, uint32_t *countp)
 {
     /* Try and handle fast arrays explicitly */
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
@@ -42379,7 +42418,7 @@ JSValue js_regexp_constructor_internal(JSContext *ctx, JSValue ctor,
     return obj;
 }
 
-static JSRegExp *js_get_regexp(JSContext *ctx, JSValue obj, BOOL throw_error)
+JSRegExp *js_get_regexp(JSContext *ctx, JSValue obj, BOOL throw_error)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(obj);
@@ -42388,6 +42427,19 @@ static JSRegExp *js_get_regexp(JSContext *ctx, JSValue obj, BOOL throw_error)
     }
     if (throw_error) {
         JS_ThrowTypeErrorInvalidClass(ctx, JS_CLASS_REGEXP);
+    }
+    return NULL;
+}
+
+struct JSMapState *_js_get_map_state(JSContext *ctx, JSValue obj, BOOL throw_error)
+{
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
+        JSObject *p = JS_VALUE_GET_OBJ(obj);
+        if (p->class_id == JS_CLASS_MAP || p->class_id == JS_CLASS_SET || p->class_id == JS_CLASS_WEAKMAP || p->class_id == JS_CLASS_WEAKSET)
+            return p->u.map_state;
+    }
+    if (throw_error) {
+        JS_ThrowTypeError(ctx, "invalid object type");
     }
     return NULL;
 }
@@ -50955,8 +51007,8 @@ static JSValue js_typed_array_get_length(JSContext *ctx,
     return js_int32(p->u.array.count);
 }
 
-static JSValue js_typed_array_get_buffer(JSContext *ctx,
-                                         JSValue this_val, int is_dataview)
+JSValue js_typed_array_get_buffer(JSContext *ctx,
+                                  JSValue this_val, int is_dataview)
 {
     JSObject *p;
     JSTypedArray *ta;
@@ -51005,6 +51057,16 @@ static JSValue js_typed_array_get_byteOffset(JSContext *ctx,
     }
     ta = p->u.typed_array;
     return js_int32(ta->offset);
+}
+
+uint32_t _js_typed_array_get_byte_offset(JSObject *p)
+{
+    return p->u.typed_array->offset;
+}
+
+uint32_t _js_typed_array_get_byte_length(JSObject *p)
+{
+    return p->u.typed_array->length;
 }
 
 /* Return the buffer associated to the typed array or an exception if
