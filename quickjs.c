@@ -1758,7 +1758,7 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 
-BOOL JS_CheckStackOverflow(JSContext *ctx, size_t alloca_size)
+BOOL _JS_CheckStackOverflow(JSContext *ctx, size_t alloca_size)
 {
     return js_check_stack_overflow(ctx->rt, alloca_size);
 }
@@ -2768,7 +2768,7 @@ static JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
     return (JSAtomKindEnum){-1}; // pacify compiler
 }
 
-BOOL JS_AtomIsString(JSContext *ctx, JSAtom v)
+BOOL _JS_AtomIsString(JSContext *ctx, JSAtom v)
 {
     return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
 }
