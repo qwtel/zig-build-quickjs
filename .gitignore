@@ -8,6 +8,7 @@ test262_*.txt
 .vs
 .idea
 cmake-*
+fuzz
 .zig-cache
 zig-out
 out
