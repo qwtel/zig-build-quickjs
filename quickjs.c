@@ -1232,7 +1232,7 @@ static JSValue js_array_buffer_constructor3(JSContext *ctx,
 static void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
 static JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValue obj);
 static BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
-JSValue js_typed_array_constructor(JSContext *ctx,
+static JSValue js_typed_array_constructor(JSContext *ctx,
                                           JSValue this_val,
                                           int argc, JSValue *argv,
                                           int classid);
@@ -54310,7 +54310,7 @@ static JSValue js_typed_array_constructor_ta(JSContext *ctx,
     return JS_EXCEPTION;
 }
 
-JSValue js_typed_array_constructor(JSContext *ctx,
+static JSValue js_typed_array_constructor(JSContext *ctx,
                                           JSValue new_target,
                                           int argc, JSValue *argv,
                                           int classid)
