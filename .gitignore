@@ -4,11 +4,12 @@
 .obj/
 build/
 unicode/
-test262_*.txt
+.ideacmake-*
 .vs
-.idea
-cmake-*
+out/
+CMakeUserPresets.json
 fuzz
+.vscode/
 .zig-cache
 zig-out
 out
