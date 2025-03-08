@@ -27,8 +27,8 @@ pub fn build(b: *std.Build) !void {
     };
 
     if (target.result.os.tag == .wasi) {
-        lib.defineCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "1");
-        lib.defineCMacro("_WASI_EMULATED_SIGNAL", "1");
+        lib.root_module.addCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "1");
+        lib.root_module.addCMacro("_WASI_EMULATED_SIGNAL", "1");
         // XXX: Zig build doesn't have a way to set link options (afaik)
         // add_link_options(
         //     -lwasi-emulated-process-clocks
@@ -67,10 +67,10 @@ pub fn build(b: *std.Build) !void {
     });
     lib.linkLibC();
 
-    lib.defineCMacro("_GNU_SOURCE", "1");
+    lib.root_module.addCMacro("_GNU_SOURCE", "1");
     if (target.result.os.tag == .windows) {
-        lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
-        lib.defineCMacro("_WIN32_WINNT", "0x0602"); // ???
+        lib.root_module.addCMacro("WIN32_LEAN_AND_MEAN", "1");
+        lib.root_module.addCMacro("_WIN32_WINNT", "0x0602"); // ???
     }
 
     if (target.result.os.tag != .windows and target.result.os.tag != .wasi) {
@@ -78,7 +78,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (mode == .Debug) {
-        lib.defineCMacro("DUMP_LEAKS", "0x4000");
+        lib.root_module.addCMacro("DUMP_LEAKS", "0x4000");
     }
 
     lib.installHeadersDirectory(b.path("."), "", .{});
