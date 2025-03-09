@@ -1171,7 +1171,7 @@ static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
 JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
 static JSValue js_compile_regexp(JSContext *ctx, JSValue pattern,
                                  JSValue flags);
-JSValue js_regexp_constructor_internal(JSContext *ctx, JSValue ctor,
+static JSValue js_regexp_constructor_internal(JSContext *ctx, JSValue ctor,
                                               JSValue pattern, JSValue bc);
 static void gc_decref(JSRuntime *rt);
 static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
@@ -43574,7 +43574,7 @@ static JSValue js_compile_regexp(JSContext *ctx, JSValue pattern,
 
 /* create a RegExp object from a string containing the RegExp bytecode
    and the source pattern */
-JSValue js_regexp_constructor_internal(JSContext *ctx, JSValue ctor,
+static JSValue js_regexp_constructor_internal(JSContext *ctx, JSValue ctor,
                                               JSValue pattern, JSValue bc)
 {
     JSValue obj;
