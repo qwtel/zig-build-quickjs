@@ -2052,7 +2052,7 @@ static JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char
     return str;
 }
 
-JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
+static JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
 {
     JSString *p;
     p = js_alloc_string_rt(ctx->rt, max_len, is_wide_char);
