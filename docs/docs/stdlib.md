@@ -143,6 +143,10 @@ pathname of `path` and `err` the error code.
 Return `[str, err]` where `str` is the current working directory
 and `err` the error code.
 
+### `exePath()`
+
+Returns the full path of the current executable or `undefined` if not available / supported.
+
 ### `chdir(path)`
 
 Change the current directory. Return 0 if OK or `-errno`.
@@ -355,6 +359,18 @@ encoding. Return `null` in case of I/O error.
 
 If `options.binary` is set to `true` a `Uint8Array` is returned instead.
 
+### `writeFile(filename, data)`
+
+Create the file `filename` and write `data` into it.
+
+`data` can be a string, a typed array or an `ArrayBuffer`. `undefined` is
+treated as the empty string.
+
+When `data` is a string, the file is opened in text mode; otherwise it is
+opened in binary mode. (This distinction is only relevant on Windows.)
+
+Throws an exception if the file cannot be created or written to.
+
 ### `open(filename, flags, errorObj = undefined)`
 
 Open a file (wrapper to the libc `fopen()`). Return the FILE
@@ -538,11 +554,16 @@ position `position` (wrapper to the libc `fwrite`).
 Return the next line from the file, assuming UTF-8 encoding, excluding
 the trailing line feed.
 
+#### `readAsArrayBuffer(max_size = undefined)`
+
+Read `max_size` bytes from the file and return them as an ArrayBuffer.
+If `max_size` is not present, the file is read until its end.
+
 #### `readAsString(max_size = undefined)`
 
 Read `max_size` bytes from the file and return them as a string
 assuming UTF-8 encoding. If `max_size` is not present, the file
-is read up its end.
+is read until its end.
 
 #### `getByte()`
 

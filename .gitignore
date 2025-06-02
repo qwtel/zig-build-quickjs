@@ -11,6 +11,7 @@ out/
 CMakeUserPresets.json
 fuzz
 .vscode/
+microbench*.txt
 .zig-cache
 zig-out
 out

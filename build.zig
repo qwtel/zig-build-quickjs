@@ -48,10 +48,10 @@ pub fn build(b: *std.Build) !void {
 
     const files: []const []const u8 = &.{
         "cutils.c",
-        "libbf.c",
         "libregexp.c",
         "libunicode.c",
         "quickjs.c",
+        "xsum.c",
     };
 
     // XXX: does that make any sense??

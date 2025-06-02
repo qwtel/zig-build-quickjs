@@ -7,12 +7,12 @@ function test_exception_source_pos()
     var e;
 
     try {
-        throw new Error(""); // line 10, column 15
+        throw new Error(""); // line 10, column 19
     } catch(_e) {
         e = _e;
     }
 
-    assert(e.stack.includes("test_builtin.js:10:15"));
+    assert(e.stack.includes("test_builtin.js:10:19"));
 }
 
 // Keep this at the top; it tests source positions.
@@ -36,7 +36,7 @@ function test_exception_prepare_stack()
     };
 
     try {
-        throw new Error(""); // line 39, column 15
+        throw new Error(""); // line 39, column 19
     } catch(_e) {
         e = _e;
     }
@@ -48,7 +48,7 @@ function test_exception_prepare_stack()
     assert(f.getFunctionName(), 'test_exception_prepare_stack');
     assert(f.getFileName().endsWith('test_builtin.js'));
     assert(f.getLineNumber(), 39);
-    assert(f.getColumnNumber(), 15);
+    assert(f.getColumnNumber(), 19);
     assert(!f.isNative());
 }
 
@@ -64,7 +64,7 @@ function test_exception_stack_size_limit()
     };
 
     try {
-        throw new Error(""); // line 67, column 15
+        throw new Error(""); // line 67, column 19
     } catch(_e) {
         e = _e;
     }
@@ -77,7 +77,7 @@ function test_exception_stack_size_limit()
     assert(f.getFunctionName(), 'test_exception_stack_size_limit');
     assert(f.getFileName().endsWith('test_builtin.js'));
     assert(f.getLineNumber(), 67);
-    assert(f.getColumnNumber(), 15);
+    assert(f.getColumnNumber(), 19);
     assert(!f.isNative());
 }
 
@@ -608,11 +608,26 @@ function test_date()
     // Hence the fractional part after . should have 3 digits and how
     // a different number of digits is handled is implementation defined.
     assert(Date.parse(""), NaN);
+    assert(Date.parse("13"), NaN);
+    assert(Date.parse("31"), NaN);
+    assert(Date.parse("1000"), -30610224000000);
+    assert(Date.parse("1969"), -31536000000);
+    assert(Date.parse("1970"), 0);
     assert(Date.parse("2000"), 946684800000);
+    assert(Date.parse("9999"), 253370764800000);
+    assert(Date.parse("275761"), NaN);
+    assert(Date.parse("999999"), NaN);
+    assert(Date.parse("1000000000"), NaN);
+    assert(Date.parse("-271821"), NaN);
+    assert(Date.parse("-271820"), -8639977881600000);
+    assert(Date.parse("-100000"), -3217862419200000);
+    assert(Date.parse("+100000"), 3093527980800000);
+    assert(Date.parse("+275760"), 8639977881600000);
+    assert(Date.parse("+275761"), NaN);
     assert(Date.parse("2000-01"), 946684800000);
     assert(Date.parse("2000-01-01"), 946684800000);
-    //assert(Date.parse("2000-01-01T"), NaN);
-    //assert(Date.parse("2000-01-01T00Z"), NaN);
+    assert(Date.parse("2000-01-01T"), NaN);
+    assert(Date.parse("2000-01-01T00Z"), NaN);
     assert(Date.parse("2000-01-01T00:00Z"), 946684800000);
     assert(Date.parse("2000-01-01T00:00:00Z"), 946684800000);
     assert(Date.parse("2000-01-01T00:00:00.1Z"), 946684800100);
