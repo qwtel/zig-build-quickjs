@@ -11840,7 +11840,7 @@ static const js_limb_t radix_base_table[JS_RADIX_MAX - 1] = {
  0x5c13d840, 0x6d91b519, 0x81bf1000,
 };
 
-static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 {
     if (JS_VALUE_GET_TAG(val) == JS_TAG_SHORT_BIG_INT) {
         char buf[66];
