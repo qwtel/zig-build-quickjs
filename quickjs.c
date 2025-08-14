@@ -192,20 +192,6 @@ enum {
 static uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 #define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
 
-typedef enum JSErrorEnum {
-    JS_EVAL_ERROR,
-    JS_RANGE_ERROR,
-    JS_REFERENCE_ERROR,
-    JS_SYNTAX_ERROR,
-    JS_TYPE_ERROR,
-    JS_URI_ERROR,
-    JS_INTERNAL_ERROR,
-    JS_AGGREGATE_ERROR,
-
-    JS_NATIVE_ERROR_COUNT, /* number of different NativeError objects */
-    JS_PLAIN_ERROR = JS_NATIVE_ERROR_COUNT
-} JSErrorEnum;
-
 #define JS_MAX_LOCAL_VARS 65535
 #define JS_STACK_SIZE_MAX 65534
 #define JS_STRING_LEN_MAX ((1 << 30) - 1)

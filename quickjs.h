@@ -740,6 +740,20 @@ static inline bool JS_IsModule(JSValueConst v)
     return JS_VALUE_GET_TAG(v) == JS_TAG_MODULE;
 }
 
+typedef enum JSErrorEnum {
+    JS_EVAL_ERROR,
+    JS_RANGE_ERROR,
+    JS_REFERENCE_ERROR,
+    JS_SYNTAX_ERROR,
+    JS_TYPE_ERROR,
+    JS_URI_ERROR,
+    JS_INTERNAL_ERROR,
+    JS_AGGREGATE_ERROR,
+
+    JS_NATIVE_ERROR_COUNT, /* number of different NativeError objects */
+    JS_PLAIN_ERROR = JS_NATIVE_ERROR_COUNT
+} JSErrorEnum;
+
 JS_EXTERN JSValue JS_Throw(JSContext *ctx, JSValue obj);
 JS_EXTERN JSValue JS_GetException(JSContext *ctx);
 JS_EXTERN bool JS_HasException(JSContext *ctx);
@@ -753,6 +767,7 @@ JS_EXTERN void JS_ClearUncatchableError(JSContext *ctx, JSValueConst val);
 //  JS_Throw(ctx, exc);
 JS_EXTERN void JS_ResetUncatchableError(JSContext *ctx);
 JS_EXTERN JSValue JS_NewError(JSContext *ctx);
+JS_EXTERN JSValue JS_MakeError(JSContext *ctx, JSErrorEnum error_num, const char *message, bool add_backtrace);
 JS_EXTERN JSValue JS_PRINTF_FORMAT_ATTR(2, 3) JS_ThrowPlainError(JSContext *ctx, JS_PRINTF_FORMAT const char *fmt, ...);
 JS_EXTERN JSValue JS_PRINTF_FORMAT_ATTR(2, 3) JS_ThrowSyntaxError(JSContext *ctx, JS_PRINTF_FORMAT const char *fmt, ...);
 JS_EXTERN JSValue JS_PRINTF_FORMAT_ATTR(2, 3) JS_ThrowTypeError(JSContext *ctx, JS_PRINTF_FORMAT const char *fmt, ...);
