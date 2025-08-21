@@ -1769,7 +1769,7 @@ static inline bool js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 
-bool _JS_CheckStackOverflow(JSContext *ctx, size_t alloca_size)
+bool qjs_check_stack_overflow(JSContext *ctx, size_t alloca_size)
 {
     return js_check_stack_overflow(ctx->rt, alloca_size);
 }
@@ -2820,7 +2820,7 @@ static JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
     return (JSAtomKindEnum){-1}; // pacify compiler
 }
 
-bool _JS_AtomIsString(JSContext *ctx, JSAtom v)
+bool qjs_atom_is_string(JSContext *ctx, JSAtom v)
 {
     return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
 }
@@ -4328,22 +4328,22 @@ static void copy_str16(uint16_t *dst, JSString *p, int offset, int len)
 }
 
 
-bool _js_string_is_wide_char(const JSString *p)
+bool qjs_string_is_wide_char(const JSString *p)
 {
     return p->is_wide_char & 1;
 }
 
-uint32_t _js_string_get_len(const JSString *p)
+uint32_t qjs_string_get_len(const JSString *p)
 {
     return p->len;
 }
 
-uint8_t const*_js_string_get_str8(JSString *p)
+uint8_t const*qjs_string_get_str8(JSString *p)
 {
     return str8(p);
 }
 
-uint16_t const*_js_string_get_str16(JSString *p)
+uint16_t const*qjs_string_get_str16(JSString *p)
 {
     return str16(p);
 }
@@ -5069,7 +5069,7 @@ static int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val)
     return -1;
 }
 
-bool _JS_GetObjectData(JSContext *ctx, JSValue obj, JSValue *pval)
+bool qjs_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
 {
     JSObject *p;
 
@@ -11966,7 +11966,7 @@ static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
     }
 }
 
-JSValue QJS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+JSValue qjs_compact_bigint(JSContext *ctx, JSBigInt *p)
 {
     return JS_CompactBigInt(ctx, p);
 }
@@ -45212,7 +45212,7 @@ JSRegExp *qjs_get_regexp(JSContext *ctx, JSValueConst obj, bool throw_error)
     return js_get_regexp(ctx, obj, throw_error);
 }
 
-struct JSMapState *_js_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
+struct JSMapState *qjs_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(obj);
@@ -54282,12 +54282,12 @@ static JSValue js_typed_array_get_byteOffset(JSContext *ctx, JSValueConst this_v
     return js_uint32(ta->offset);
 }
 
-uint32_t _js_typed_array_get_byte_offset(JSObject *p)
+uint32_t qjs_typed_array_get_byte_offset(JSObject *p)
 {
     return p->u.typed_array->offset;
 }
 
-uint32_t _js_typed_array_get_byte_length(JSObject *p)
+uint32_t qjs_typed_array_get_byte_length(JSObject *p)
 {
     return p->u.typed_array->length;
 }
