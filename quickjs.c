@@ -1769,11 +1769,6 @@ static inline bool js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 
-bool qjs_check_stack_overflow(JSContext *ctx, size_t alloca_size)
-{
-    return js_check_stack_overflow(ctx->rt, alloca_size);
-}
-
 JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
 {
     JSRuntime *rt;
@@ -2820,11 +2815,6 @@ static JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
     return (JSAtomKindEnum){-1}; // pacify compiler
 }
 
-bool qjs_atom_is_string(JSContext *ctx, JSAtom v)
-{
-    return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
-}
-
 static JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p)
 {
     uint32_t i = p->hash_next;  /* atom_index */
@@ -3625,12 +3615,6 @@ static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
     return JS_MKPTR(JS_TAG_STRING, str);
 }
 
-/* Public wrappers for txiki.js – guarded with */
-JSValue qjs_new_string8_len(JSContext *ctx, const char *buf, int len)
-{
-    return js_new_string8_len(ctx, buf, len);
-}
-
 // XXX: `buf` contains raw 8-bit data, no UTF-8 decoding is performed
 // XXX: no special case for the empty string
 static inline JSValue js_new_string8(JSContext *ctx, const char *str)
@@ -3646,11 +3630,6 @@ static JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
         return JS_EXCEPTION;
     memcpy(str16(str), buf, len * 2);
     return JS_MKPTR(JS_TAG_STRING, str);
-}
-
-JSValue qjs_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
-{
-    return js_new_string16_len(ctx, buf, len);
 }
 
 static JSValue js_new_string_char(JSContext *ctx, uint16_t c)
@@ -4325,27 +4304,6 @@ static void copy_str16(uint16_t *dst, JSString *p, int offset, int len)
         for(i = 0; i < len; i++)
             dst[i] = src1[i];
     }
-}
-
-
-bool qjs_string_is_wide_char(const JSString *p)
-{
-    return p->is_wide_char & 1;
-}
-
-uint32_t qjs_string_get_len(const JSString *p)
-{
-    return p->len;
-}
-
-uint8_t const*qjs_string_get_str8(JSString *p)
-{
-    return str8(p);
-}
-
-uint16_t const*qjs_string_get_str16(JSString *p)
-{
-    return str16(p);
 }
 
 static JSValue JS_ConcatString1(JSContext *ctx, JSString *p1, JSString *p2)
@@ -5067,26 +5025,6 @@ static int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val)
     if (!JS_IsException(obj))
         JS_ThrowTypeError(ctx, "invalid object type");
     return -1;
-}
-
-bool qjs_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
-{
-    JSObject *p;
-
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
-        p = JS_VALUE_GET_OBJ(obj);
-        switch(p->class_id) {
-        case JS_CLASS_NUMBER:
-        case JS_CLASS_STRING:
-        case JS_CLASS_BOOLEAN:
-        case JS_CLASS_SYMBOL:
-        case JS_CLASS_DATE:
-        case JS_CLASS_BIG_INT:
-            *pval = js_dup(p->u.object_data);
-            return true;
-        }
-    }
-    return false;
 }
 
 JSValue JS_NewObjectClass(JSContext *ctx, int class_id)
@@ -11773,12 +11711,6 @@ static JSBigInt *js_bigint_from_string(JSContext *ctx,
     return r;
 }
 
-JSBigInt *qjs_bigint_from_string(JSContext *ctx, const char *str, int radix)
-{
-    return js_bigint_from_string(ctx, str, radix);
-}
-
-
 /* 2 <= base <= 36 */
 static char const digits[36] = {
     '0','1','2','3','4','5','6','7','8','9',
@@ -11947,11 +11879,6 @@ static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
     }
 }
 
-JSValue qjs_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
-{
-    return js_bigint_to_string1(ctx, val, radix);
-}
-
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
 static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
@@ -11964,11 +11891,6 @@ static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
     } else {
         return JS_MKPTR(JS_TAG_BIG_INT, p);
     }
-}
-
-JSValue qjs_compact_bigint(JSContext *ctx, JSBigInt *p)
-{
-    return JS_CompactBigInt(ctx, p);
 }
 
 /* XXX: remove */
@@ -15801,17 +15723,6 @@ static bool js_is_fast_array(JSContext *ctx, JSValue obj)
         }
     }
     return false;
-}
-
-/* Public wrappers for fast array helpers */
-bool qjs_is_fast_array(JSContext *ctx, JSValue obj)
-{
-    return js_is_fast_array(ctx, obj);
-}
-
-bool qjs_get_fast_array(JSContext *ctx, JSValue obj, JSValue **arrpp, uint32_t *countp)
-{
-    return js_get_fast_array(ctx, obj, arrpp, countp);
 }
 
 /* Access an Array's internal JSValue array if available */
@@ -45206,25 +45117,6 @@ static JSRegExp *js_get_regexp(JSContext *ctx, JSValueConst obj,
     return NULL;
 }
 
-/* Public wrapper for regexp getter */
-JSRegExp *qjs_get_regexp(JSContext *ctx, JSValueConst obj, bool throw_error)
-{
-    return js_get_regexp(ctx, obj, throw_error);
-}
-
-struct JSMapState *qjs_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
-{
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(obj);
-        if (p->class_id == JS_CLASS_MAP || p->class_id == JS_CLASS_SET || p->class_id == JS_CLASS_WEAKMAP || p->class_id == JS_CLASS_WEAKSET)
-            return p->u.map_state;
-    }
-    if (throw_error) {
-        JS_ThrowTypeError(ctx, "invalid object type");
-    }
-    return NULL;
-}
-
 /* return < 0 if exception or true/false */
 static int js_is_regexp(JSContext *ctx, JSValueConst obj)
 {
@@ -54245,12 +54137,6 @@ static JSValue js_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
     return js_dup(JS_MKPTR(JS_TAG_OBJECT, ta->buffer));
 }
 
-/* Public wrappers for typed array & dataview */
-JSValue qjs_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
-{
-    return js_typed_array_get_buffer(ctx, this_val);
-}
-
 static JSValue js_typed_array_get_byteLength(JSContext *ctx, JSValueConst this_val)
 {
     uint32_t size_log2;
@@ -54280,16 +54166,6 @@ static JSValue js_typed_array_get_byteOffset(JSContext *ctx, JSValueConst this_v
         return js_int32(0);
     ta = p->u.typed_array;
     return js_uint32(ta->offset);
-}
-
-uint32_t qjs_typed_array_get_byte_offset(JSObject *p)
-{
-    return p->u.typed_array->offset;
-}
-
-uint32_t qjs_typed_array_get_byte_length(JSObject *p)
-{
-    return p->u.typed_array->length;
 }
 
 JSValue JS_NewTypedArray(JSContext *ctx, int argc, JSValueConst *argv,
@@ -56303,16 +56179,6 @@ static JSValue js_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
     return js_dup(JS_MKPTR(JS_TAG_OBJECT, ta->buffer));
 }
 
-JSValue qjs_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
-{
-    return js_dataview_get_buffer(ctx, this_val);
-}
-
-JSValue qjs_dataview_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
-{
-    return js_dataview_constructor(ctx, new_target, argc, argv);
-}
-
 static JSValue js_dataview_get_byteLength(JSContext *ctx, JSValueConst this_val)
 {
     JSArrayBuffer *abuf;
@@ -57856,6 +57722,137 @@ uintptr_t js_std_cmd(int cmd, ...) {
 
     return rv;
 }
+
+#ifdef ZIG_BUILD_TXIKI_EXTRAS
+bool qjs_check_stack_overflow(JSContext *ctx, size_t alloca_size)
+{
+    return js_check_stack_overflow(ctx->rt, alloca_size);
+}
+
+bool qjs_atom_is_string(JSContext *ctx, JSAtom v)
+{
+    return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
+}
+
+JSValue qjs_new_string8_len(JSContext *ctx, const char *buf, int len)
+{
+    return js_new_string8_len(ctx, buf, len);
+}
+
+JSValue qjs_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
+{
+    return js_new_string16_len(ctx, buf, len);
+}
+
+bool qjs_string_is_wide_char(const JSString *p)
+{
+    return p->is_wide_char & 1;
+}
+
+uint32_t qjs_string_get_len(const JSString *p)
+{
+    return p->len;
+}
+
+uint8_t const*qjs_string_get_str8(JSString *p)
+{
+    return str8(p);
+}
+
+uint16_t const*qjs_string_get_str16(JSString *p)
+{
+    return str16(p);
+}
+
+// See also JS_SetObjectData
+bool qjs_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
+{
+    JSObject *p;
+
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
+        p = JS_VALUE_GET_OBJ(obj);
+        switch(p->class_id) {
+        case JS_CLASS_NUMBER:
+        case JS_CLASS_STRING:
+        case JS_CLASS_BOOLEAN:
+        case JS_CLASS_SYMBOL:
+        case JS_CLASS_DATE:
+        case JS_CLASS_BIG_INT:
+            *pval = js_dup(p->u.object_data);
+            return true;
+        }
+    }
+    return false;
+}
+
+JSBigInt *qjs_bigint_from_string(JSContext *ctx, const char *str, int radix)
+{
+    return js_bigint_from_string(ctx, str, radix);
+}
+
+JSValue qjs_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+{
+    return js_bigint_to_string1(ctx, val, radix);
+}
+
+JSValue qjs_compact_bigint(JSContext *ctx, JSBigInt *p)
+{
+    return JS_CompactBigInt(ctx, p);
+}
+
+bool qjs_is_fast_array(JSContext *ctx, JSValue obj)
+{
+    return js_is_fast_array(ctx, obj);
+}
+
+bool qjs_get_fast_array(JSContext *ctx, JSValue obj, JSValue **arrpp, uint32_t *countp)
+{
+    return js_get_fast_array(ctx, obj, arrpp, countp);
+}
+
+JSRegExp *qjs_get_regexp(JSContext *ctx, JSValueConst obj, bool throw_error)
+{
+    return js_get_regexp(ctx, obj, throw_error);
+}
+
+struct JSMapState *qjs_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
+{
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
+        JSObject *p = JS_VALUE_GET_OBJ(obj);
+        if (p->class_id == JS_CLASS_MAP || p->class_id == JS_CLASS_SET || p->class_id == JS_CLASS_WEAKMAP || p->class_id == JS_CLASS_WEAKSET)
+            return p->u.map_state;
+    }
+    if (throw_error) {
+        JS_ThrowTypeError(ctx, "invalid object type");
+    }
+    return NULL;
+}
+
+JSValue qjs_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
+{
+    return js_typed_array_get_buffer(ctx, this_val);
+}
+
+uint32_t qjs_typed_array_get_byte_offset(JSObject *p)
+{
+    return p->u.typed_array->offset;
+}
+
+uint32_t qjs_typed_array_get_byte_length(JSObject *p)
+{
+    return p->u.typed_array->length;
+}
+
+JSValue qjs_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
+{
+    return js_dataview_get_buffer(ctx, this_val);
+}
+
+JSValue qjs_dataview_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
+{
+    return js_dataview_constructor(ctx, new_target, argc, argv);
+}
+#endif
 
 #undef malloc
 #undef free

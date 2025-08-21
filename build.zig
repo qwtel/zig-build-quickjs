@@ -4,6 +4,8 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardOptimizeOption(.{});
 
+    const txiki_extras = b.option(bool, "extras", "Define ZIG_BUILD_TXIKI_EXTRAS") orelse false;
+
     const lib = b.addStaticLibrary(.{
         .name = "qjs",
         .target = target,
@@ -79,6 +81,10 @@ pub fn build(b: *std.Build) !void {
 
     if (mode == .Debug) {
         lib.root_module.addCMacro("DUMP_LEAKS", "0x4000");
+    }
+
+    if (txiki_extras) {
+        lib.root_module.addCMacro("ZIG_BUILD_TXIKI_EXTRAS", "1");
     }
 
     lib.installHeadersDirectory(b.path("."), "", .{});
