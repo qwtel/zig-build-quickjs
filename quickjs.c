@@ -57724,48 +57724,48 @@ uintptr_t js_std_cmd(int cmd, ...) {
 }
 
 #ifdef ZIG_BUILD_TXIKI_EXTRAS
-bool qjs_check_stack_overflow(JSContext *ctx, size_t alloca_size)
+bool _js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
 {
     return js_check_stack_overflow(ctx->rt, alloca_size);
 }
 
-bool qjs_atom_is_string(JSContext *ctx, JSAtom v)
+bool _js_atom_is_string(JSContext *ctx, JSAtom v)
 {
     return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
 }
 
-JSValue qjs_new_string8_len(JSContext *ctx, const char *buf, int len)
+JSValue _js_new_string8_len(JSContext *ctx, const char *buf, int len)
 {
     return js_new_string8_len(ctx, buf, len);
 }
 
-JSValue qjs_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
+JSValue _js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
 {
     return js_new_string16_len(ctx, buf, len);
 }
 
-bool qjs_string_is_wide_char(const JSString *p)
+bool _js_string_is_wide_char(const JSString *p)
 {
     return p->is_wide_char & 1;
 }
 
-uint32_t qjs_string_get_len(const JSString *p)
+uint32_t _js_string_get_len(const JSString *p)
 {
     return p->len;
 }
 
-uint8_t const*qjs_string_get_str8(JSString *p)
+uint8_t const*_js_string_get_str8(JSString *p)
 {
     return str8(p);
 }
 
-uint16_t const*qjs_string_get_str16(JSString *p)
+uint16_t const*_js_string_get_str16(JSString *p)
 {
     return str16(p);
 }
 
 // See also JS_SetObjectData
-bool qjs_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
+bool _js_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
 {
     JSObject *p;
 
@@ -57785,37 +57785,37 @@ bool qjs_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
     return false;
 }
 
-JSBigInt *qjs_bigint_from_string(JSContext *ctx, const char *str, int radix)
+JSBigInt *_js_bigint_from_string(JSContext *ctx, const char *str, int radix)
 {
     return js_bigint_from_string(ctx, str, radix);
 }
 
-JSValue qjs_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+JSValue _js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 {
     return js_bigint_to_string1(ctx, val, radix);
 }
 
-JSValue qjs_compact_bigint(JSContext *ctx, JSBigInt *p)
+JSValue _js_compact_bigint(JSContext *ctx, JSBigInt *p)
 {
     return JS_CompactBigInt(ctx, p);
 }
 
-bool qjs_is_fast_array(JSContext *ctx, JSValue obj)
+bool _js_is_fast_array(JSContext *ctx, JSValue obj)
 {
     return js_is_fast_array(ctx, obj);
 }
 
-bool qjs_get_fast_array(JSContext *ctx, JSValue obj, JSValue **arrpp, uint32_t *countp)
+bool _js_get_fast_array(JSContext *ctx, JSValue obj, JSValue **arrpp, uint32_t *countp)
 {
     return js_get_fast_array(ctx, obj, arrpp, countp);
 }
 
-JSRegExp *qjs_get_regexp(JSContext *ctx, JSValueConst obj, bool throw_error)
+JSRegExp *_js_get_regexp(JSContext *ctx, JSValueConst obj, bool throw_error)
 {
     return js_get_regexp(ctx, obj, throw_error);
 }
 
-struct JSMapState *qjs_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
+struct JSMapState *_js_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(obj);
@@ -57828,27 +57828,27 @@ struct JSMapState *qjs_get_map_state(JSContext *ctx, JSValue obj, bool throw_err
     return NULL;
 }
 
-JSValue qjs_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
+JSValue _js_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
 {
     return js_typed_array_get_buffer(ctx, this_val);
 }
 
-uint32_t qjs_typed_array_get_byte_offset(JSObject *p)
+uint32_t _js_typed_array_get_byte_offset(JSObject *p)
 {
     return p->u.typed_array->offset;
 }
 
-uint32_t qjs_typed_array_get_byte_length(JSObject *p)
+uint32_t _js_typed_array_get_byte_length(JSObject *p)
 {
     return p->u.typed_array->length;
 }
 
-JSValue qjs_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
+JSValue _js_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
 {
     return js_dataview_get_buffer(ctx, this_val);
 }
 
-JSValue qjs_dataview_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
+JSValue _js_dataview_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
 {
     return js_dataview_constructor(ctx, new_target, argc, argv);
 }
