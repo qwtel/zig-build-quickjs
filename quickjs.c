@@ -1144,7 +1144,7 @@ static int JS_ToBoolFree(JSContext *ctx, JSValue val);
 static int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 static int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val);
 static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
-JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
 static JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
                                  JSValueConst flags);
 static JSValue js_regexp_constructor_internal(JSContext *ctx, JSValueConst ctor,
@@ -1266,9 +1266,9 @@ static void js_free_shape_null(JSRuntime *rt, JSShape *sh);
 static int js_shape_prepare_update(JSContext *ctx, JSObject *p,
                                    JSShapeProperty **pprs);
 static int init_shape_hash(JSRuntime *rt);
-__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+static __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValueConst obj);
-__exception int js_get_length64(JSContext *ctx, int64_t *pres,
+static __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                        JSValueConst obj);
 static __exception int js_set_length64(JSContext *ctx, JSValueConst obj,
                                        int64_t len);
@@ -1276,8 +1276,8 @@ static void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 static JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
                                JSValueConst array_arg);
 static JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
-bool js_get_fast_array(JSContext *ctx, JSValue obj,
-                       JSValue **arrpp, uint32_t *countp);
+static bool js_get_fast_array(JSContext *ctx, JSValue obj,
+                              JSValue **arrpp, uint32_t *countp);
 static int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
 static JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
                                               JSValue sync_iter);
@@ -3614,7 +3614,7 @@ int JS_NewClass(JSRuntime *rt, JSClassID class_id, const JSClassDef *class_def)
 
 // XXX: `buf` contains raw 8-bit data, no UTF-8 decoding is performed
 // XXX: no special case for len == 0
-JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
+static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
 {
     JSString *str;
     str = js_alloc_string(ctx, len, 0);
@@ -3625,6 +3625,12 @@ JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
     return JS_MKPTR(JS_TAG_STRING, str);
 }
 
+/* Public wrappers for txiki.js – guarded with */
+JSValue qjs_new_string8_len(JSContext *ctx, const char *buf, int len)
+{
+    return js_new_string8_len(ctx, buf, len);
+}
+
 // XXX: `buf` contains raw 8-bit data, no UTF-8 decoding is performed
 // XXX: no special case for the empty string
 static inline JSValue js_new_string8(JSContext *ctx, const char *str)
@@ -3632,7 +3638,7 @@ static inline JSValue js_new_string8(JSContext *ctx, const char *str)
     return js_new_string8_len(ctx, str, strlen(str));
 }
 
-JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
+static JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
 {
     JSString *str;
     str = js_alloc_string(ctx, len, 1);
@@ -3640,6 +3646,11 @@ JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
         return JS_EXCEPTION;
     memcpy(str16(str), buf, len * 2);
     return JS_MKPTR(JS_TAG_STRING, str);
+}
+
+JSValue qjs_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
+{
+    return js_new_string16_len(ctx, buf, len);
 }
 
 static JSValue js_new_string_char(JSContext *ctx, uint16_t c)
@@ -11673,8 +11684,8 @@ static const js_limb_t js_pow_dec[JS_LIMB_DIGITS + 1] = {
 
 /* syntax: [-]digits in base radix. Return NULL if memory error. radix
    = 10, 2, 8 or 16. */
-JSBigInt *js_bigint_from_string(JSContext *ctx,
-                                const char *str, int radix)
+static JSBigInt *js_bigint_from_string(JSContext *ctx,
+                                       const char *str, int radix)
 {
     const char *p = str;
     int is_neg, n_digits, n_limbs, len, log2_radix, n_bits, i;
@@ -11762,6 +11773,12 @@ JSBigInt *js_bigint_from_string(JSContext *ctx,
     return r;
 }
 
+JSBigInt *qjs_bigint_from_string(JSContext *ctx, const char *str, int radix)
+{
+    return js_bigint_from_string(ctx, str, radix);
+}
+
+
 /* 2 <= base <= 36 */
 static char const digits[36] = {
     '0','1','2','3','4','5','6','7','8','9',
@@ -11833,7 +11850,7 @@ static const js_limb_t radix_base_table[JS_RADIX_MAX - 1] = {
  0x5c13d840, 0x6d91b519, 0x81bf1000,
 };
 
-JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 {
     if (JS_VALUE_GET_TAG(val) == JS_TAG_SHORT_BIG_INT) {
         char buf[66];
@@ -11930,9 +11947,14 @@ JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
     }
 }
 
+JSValue qjs_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+{
+    return js_bigint_to_string1(ctx, val, radix);
+}
+
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
-JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
 {
     JSValue res;
     if (p->len == 1) {
@@ -11942,6 +11964,11 @@ JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
     } else {
         return JS_MKPTR(JS_TAG_BIG_INT, p);
     }
+}
+
+JSValue QJS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+{
+    return JS_CompactBigInt(ctx, p);
 }
 
 /* XXX: remove */
@@ -11996,7 +12023,6 @@ static double js_strtod(const char *str, int radix, bool is_float)
     }
     return d;
 }
-
 
 /* `js_atof(ctx, p, len, pp, radix, flags)`
    Convert the string pointed to by `p` to a number value.
@@ -15765,7 +15791,7 @@ static JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
 static JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv, int magic);
 
-bool js_is_fast_array(JSContext *ctx, JSValue obj)
+static bool js_is_fast_array(JSContext *ctx, JSValue obj)
 {
     /* Try and handle fast arrays explicitly */
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
@@ -15777,9 +15803,20 @@ bool js_is_fast_array(JSContext *ctx, JSValue obj)
     return false;
 }
 
+/* Public wrappers for fast array helpers */
+bool qjs_is_fast_array(JSContext *ctx, JSValue obj)
+{
+    return js_is_fast_array(ctx, obj);
+}
+
+bool qjs_get_fast_array(JSContext *ctx, JSValue obj, JSValue **arrpp, uint32_t *countp)
+{
+    return js_get_fast_array(ctx, obj, arrpp, countp);
+}
+
 /* Access an Array's internal JSValue array if available */
-bool js_get_fast_array(JSContext *ctx, JSValue obj,
-                       JSValue **arrpp, uint32_t *countp)
+static bool js_get_fast_array(JSContext *ctx, JSValue obj,
+                              JSValue **arrpp, uint32_t *countp)
 {
     /* Try and handle fast arrays explicitly */
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
@@ -39106,8 +39143,8 @@ static JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
     return JS_EXCEPTION;
 }
 
-__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
-                                JSValueConst obj)
+static __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                       JSValueConst obj)
 {
     JSValue len_val;
     len_val = JS_GetProperty(ctx, obj, JS_ATOM_length);
@@ -39118,8 +39155,8 @@ __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
     return JS_ToUint32Free(ctx, pres, len_val);
 }
 
-__exception int js_get_length64(JSContext *ctx, int64_t *pres,
-                                JSValueConst obj)
+static __exception int js_get_length64(JSContext *ctx, int64_t *pres,
+                                       JSValueConst obj)
 {
     JSValue len_val;
     len_val = JS_GetProperty(ctx, obj, JS_ATOM_length);
@@ -45155,8 +45192,8 @@ static JSValue js_regexp_constructor_internal(JSContext *ctx, JSValueConst ctor,
     return obj;
 }
 
-JSRegExp *js_get_regexp(JSContext *ctx, JSValueConst obj,
-                        bool throw_error)
+static JSRegExp *js_get_regexp(JSContext *ctx, JSValueConst obj,
+                               bool throw_error)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(obj);
@@ -45167,6 +45204,12 @@ JSRegExp *js_get_regexp(JSContext *ctx, JSValueConst obj,
         JS_ThrowTypeErrorInvalidClass(ctx, JS_CLASS_REGEXP);
     }
     return NULL;
+}
+
+/* Public wrapper for regexp getter */
+JSRegExp *qjs_get_regexp(JSContext *ctx, JSValueConst obj, bool throw_error)
+{
+    return js_get_regexp(ctx, obj, throw_error);
 }
 
 struct JSMapState *_js_get_map_state(JSContext *ctx, JSValue obj, bool throw_error)
@@ -48726,7 +48769,7 @@ static JSValueConst map_normalize_key_const(JSContext *ctx, JSValueConst key)
 }
 
 /* XXX: better hash ? */
-uint32_t map_hash_key(JSContext *ctx, JSValueConst key)
+static uint32_t map_hash_key(JSContext *ctx, JSValueConst key)
 {
     uint32_t tag = JS_VALUE_GET_NORM_TAG(key);
     uint32_t h;
@@ -54191,7 +54234,7 @@ static JSValue js_typed_array_get_length(JSContext *ctx, JSValueConst this_val)
     return js_int32(p->u.array.count);
 }
 
-JSValue js_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
+static JSValue js_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
 {
     JSObject *p;
     JSTypedArray *ta;
@@ -54200,6 +54243,12 @@ JSValue js_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
         return JS_EXCEPTION;
     ta = p->u.typed_array;
     return js_dup(JS_MKPTR(JS_TAG_OBJECT, ta->buffer));
+}
+
+/* Public wrappers for typed array & dataview */
+JSValue qjs_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
+{
+    return js_typed_array_get_buffer(ctx, this_val);
 }
 
 static JSValue js_typed_array_get_byteLength(JSContext *ctx, JSValueConst this_val)
@@ -56136,9 +56185,9 @@ static void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
-JSValue js_dataview_constructor(JSContext *ctx,
-                                JSValueConst new_target,
-                                int argc, JSValueConst *argv)
+static JSValue js_dataview_constructor(JSContext *ctx,
+                                       JSValueConst new_target,
+                                       int argc, JSValueConst *argv)
 {
     bool recompute_len = false;
     bool track_rab = false;
@@ -56243,7 +56292,7 @@ static JSObject *get_dataview(JSContext *ctx, JSValueConst this_val)
     return p;
 }
 
-JSValue js_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
+static JSValue js_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
 {
     JSObject *p;
     JSTypedArray *ta;
@@ -56252,6 +56301,16 @@ JSValue js_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
         return JS_EXCEPTION;
     ta = p->u.typed_array;
     return js_dup(JS_MKPTR(JS_TAG_OBJECT, ta->buffer));
+}
+
+JSValue qjs_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
+{
+    return js_dataview_get_buffer(ctx, this_val);
+}
+
+JSValue qjs_dataview_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
+{
+    return js_dataview_constructor(ctx, new_target, argc, argv);
 }
 
 static JSValue js_dataview_get_byteLength(JSContext *ctx, JSValueConst this_val)
