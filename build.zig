@@ -6,10 +6,13 @@ pub fn build(b: *std.Build) !void {
 
     const txiki_extras = b.option(bool, "extras", "Define ZIG_BUILD_TXIKI_EXTRAS") orelse false;
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
+        .linkage = .static,
         .name = "qjs",
-        .target = target,
-        .optimize = mode,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = mode,
+        }),
     });
 
     lib.addIncludePath(b.path("."));
