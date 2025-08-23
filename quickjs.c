@@ -57852,6 +57852,105 @@ JSValue _js_dataview_constructor(JSContext *ctx, JSValueConst new_target, int ar
 {
     return js_dataview_constructor(ctx, new_target, argc, argv);
 }
+
+JSShapeProperty *_js_get_shape_prop(JSObject *p)
+{
+    return get_shape_prop(p->shape);
+}
+
+// bool _js_atom_is_array_index(JSContext *ctx, uint32_t *pval, JSAtom atom) {
+//     return JS_AtomIsArrayIndex(ctx, pval, atom);
+// }
+
+/* Return 0 if OK, < 0 if exception.
+   Produces an array of own-enumerable string keys from the shape,
+   excluding array-index keys with idx < skip_indices_below.
+   The returned array must be freed with JS_FreePropertyEnum(). */
+int _js_get_non_index_enumerable_string_keys_excluding(JSContext *ctx,
+                                                       JSPropertyEnum **ptab,
+                                                       uint32_t *plen,
+                                                       JSValueConst obj,
+                                                       uint32_t skip_indices_below) {
+    JSObject *p;
+    JSShape *sh;
+    JSShapeProperty *prs;
+    JSPropertyEnum *tab = NULL;
+    uint32_t count = 0, i;
+
+    *ptab = NULL;
+    *plen = 0;
+
+    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT) {
+        JS_ThrowTypeErrorNotAnObject(ctx);
+        return -1;
+    }
+    p = JS_VALUE_GET_OBJ(obj);
+    sh = p->shape;
+
+    /* First pass: count */
+    for (i = 0, prs = get_shape_prop(sh); i < (uint32_t) sh->prop_count; i++, prs++) {
+        JSAtom atom = prs->atom;
+        if (atom == JS_ATOM_NULL) {
+            continue;
+        }
+
+        /* Only enumerable properties */
+        if ((prs->flags & JS_PROP_ENUMERABLE) == 0) {
+            continue;
+        }
+
+        /* Raise on TDZ (match JS_GetOwnPropertyNamesInternal behavior) */
+        if (unlikely((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF)) {
+            JSVarRef *var_ref = p->prop[i].u.var_ref;
+            if (unlikely(JS_IsUninitialized(*var_ref->pvalue))) {
+                JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
+                return -1;
+            }
+        }
+
+        uint32_t idx;
+        if (JS_AtomIsArrayIndex(ctx, &idx, atom) && idx < skip_indices_below) {
+            continue;
+        }
+
+        /* Keep everything else (string keys and numeric >= threshold) */
+        count++;
+    }
+
+    if (count == 0) {
+        return 0;
+    }
+
+    tab = js_malloc(ctx, sizeof(tab[0]) * count);
+    if (!tab) {
+        return -1;
+    }
+
+    uint32_t out = 0;
+    for (i = 0, prs = get_shape_prop(sh); i < (uint32_t) sh->prop_count; i++, prs++) {
+        JSAtom atom = prs->atom;
+        if (atom == JS_ATOM_NULL) {
+            continue;
+        }
+        if ((prs->flags & JS_PROP_ENUMERABLE) == 0) {
+            continue;
+        }
+
+        uint32_t idx;
+        if (JS_AtomIsArrayIndex(ctx, &idx, atom) && idx < skip_indices_below) {
+            continue;
+        }
+
+        tab[out].atom = JS_DupAtom(ctx, atom);
+        tab[out].is_enumerable = 1;
+        out++;
+    }
+    /* out should equal count */
+
+    *ptab = tab;
+    *plen = count;
+    return 0;
+}
 #endif
 
 #undef malloc
