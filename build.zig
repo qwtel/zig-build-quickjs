@@ -52,7 +52,6 @@ pub fn build(b: *std.Build) !void {
     }
 
     const files: []const []const u8 = &.{
-        "cutils.c",
         "dtoa.c",
         "libregexp.c",
         "libunicode.c",
