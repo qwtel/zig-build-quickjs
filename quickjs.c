@@ -1,10 +1,10 @@
 /*
  * QuickJS Javascript Engine
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
- * Copyright (c) 2023-2025 Ben Noordhuis
- * Copyright (c) 2023-2025 Saúl Ibarra Corretgé
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -307,7 +307,11 @@ struct JSRuntime {
 
     struct list_head job_list; /* list of JSJobEntry.link */
 
-    JSModuleNormalizeFunc *module_normalize_func;
+    bool module_normalize_has_attr;
+    union {
+        JSModuleNormalizeFunc *module_normalize_func;
+        JSModuleNormalizeFunc2 *module_normalize_func2;
+    } normalize_u;
     bool module_loader_has_attr;
     union {
         JSModuleLoaderFunc *module_loader_func;
@@ -17974,6 +17978,8 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 sp[-2] = js_regexp_constructor_internal(ctx, JS_UNDEFINED,
                                                         sp[-2], sp[-1]);
                 sp--;
+                if (JS_IsException(sp[-1]))
+                    goto exception;
             }
             BREAK;
 
@@ -20935,9 +20941,8 @@ static JSValue js_async_generator_resolve_function(JSContext *ctx,
         } else {
             js_async_generator_resolve(ctx, s, arg, true);
         }
-    } else {
+    } else if (s->state == JS_ASYNC_GENERATOR_STATE_EXECUTING) {
         /* restart function execution after await() */
-        assert(s->state == JS_ASYNC_GENERATOR_STATE_EXECUTING);
         s->func_state.throw_flag = is_reject;
         if (is_reject) {
             JS_Throw(ctx, js_dup(arg));
@@ -29035,7 +29040,8 @@ void JS_SetModuleLoaderFunc(JSRuntime *rt,
                             JSModuleNormalizeFunc *module_normalize,
                             JSModuleLoaderFunc *module_loader, void *opaque)
 {
-    rt->module_normalize_func = module_normalize;
+    rt->module_normalize_has_attr = false;
+    rt->normalize_u.module_normalize_func = module_normalize;
     rt->module_loader_has_attr = false;
     rt->u.module_loader_func = module_loader;
     rt->module_check_attrs = NULL;
@@ -29048,11 +29054,19 @@ void JS_SetModuleLoaderFunc2(JSRuntime *rt,
                              JSModuleCheckSupportedImportAttributes *module_check_attrs,
                              void *opaque)
 {
-    rt->module_normalize_func = module_normalize;
+    rt->module_normalize_has_attr = false;
+    rt->normalize_u.module_normalize_func = module_normalize;
     rt->module_loader_has_attr = true;
     rt->u.module_loader_func2 = module_loader;
     rt->module_check_attrs = module_check_attrs;
     rt->module_loader_opaque = opaque;
+}
+
+void JS_SetModuleNormalizeFunc2(JSRuntime *rt,
+                                JSModuleNormalizeFunc2 *module_normalize)
+{
+    rt->module_normalize_has_attr = true;
+    rt->normalize_u.module_normalize_func2 = module_normalize;
 }
 
 int JS_SetModulePrivateValue(JSContext *ctx, JSModuleDef *m, JSValue val)
@@ -29152,11 +29166,15 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
     char *cname;
     JSAtom module_name;
 
-    if (!rt->module_normalize_func) {
+    if (!rt->normalize_u.module_normalize_func && !rt->normalize_u.module_normalize_func2) {
         cname = js_default_module_normalize_name(ctx, base_cname, cname1);
+    } else if (rt->module_normalize_has_attr) {
+        cname = rt->normalize_u.module_normalize_func2(ctx, base_cname, cname1,
+                                                       attributes,
+                                                       rt->module_loader_opaque);
     } else {
-        cname = rt->module_normalize_func(ctx, base_cname, cname1,
-                                          rt->module_loader_opaque);
+        cname = rt->normalize_u.module_normalize_func(ctx, base_cname, cname1,
+                                                      rt->module_loader_opaque);
     }
     if (!cname)
         return NULL;
@@ -43303,7 +43321,7 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
                                          int argc, JSValueConst *argv)
 {
     JSIteratorConcatData *it;
-    JSValue ret;
+    JSValue ret, *pval;
 
     it = JS_GetOpaque2(ctx, this_val, JS_CLASS_ITERATOR_CONCAT);
     if (!it)
@@ -43319,8 +43337,11 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
         ret = JS_CallFree(ctx, ret, it->iter, 0, NULL);
         it->running = false;
     }
-    while (it->index < it->count)
-        JS_FreeValue(ctx, it->values[it->index++]);
+    while (it->index < it->count) {
+        pval = &it->values[it->index++];
+        JS_FreeValue(ctx, *pval);
+        *pval = JS_UNDEFINED;
+    }
     JS_FreeValue(ctx, it->iter);
     JS_FreeValue(ctx, it->next);
     it->iter = JS_UNDEFINED;
@@ -44905,12 +44926,48 @@ static JSValue js_string_codePointAt(JSContext *ctx, JSValueConst this_val,
 static JSValue js_string_concat(JSContext *ctx, JSValueConst this_val,
                                 int argc, JSValueConst *argv)
 {
+    int i, is_wide_char;
+    JSString *p, *q;
+    int64_t len;
+    uint32_t n;
     JSValue r;
-    int i;
+    char *d;
 
-    /* XXX: Use more efficient method */
-    /* XXX: This method is OK if r has a single refcount */
-    /* XXX: should use string_buffer? */
+    if (JS_TAG_STRING != JS_VALUE_GET_TAG(this_val))
+        goto slow_path;
+    p = JS_VALUE_GET_STRING(this_val);
+    len = p->len;
+    is_wide_char = p->is_wide_char;
+    for (i = 0; i < argc; i++) {
+        if (JS_TAG_STRING != JS_VALUE_GET_TAG(argv[i]))
+            goto slow_path;
+        p = JS_VALUE_GET_STRING(argv[i]);
+        if (p->is_wide_char ^ is_wide_char)
+            goto slow_path;
+        len += p->len;
+    }
+    if (len > INT_MAX>>is_wide_char)
+        return JS_ThrowOutOfMemory(ctx);
+    p = JS_VALUE_GET_STRING(this_val);
+    if (p->len == len)
+        return js_dup(this_val);
+    q = js_alloc_string(ctx, len, is_wide_char);
+    if (!q)
+        return JS_EXCEPTION;
+    d = strv(q);
+    n = p->len << is_wide_char;
+    memcpy(d, strv(p), n);
+    d += n;
+    for (i = 0; i < argc; i++) {
+        p = JS_VALUE_GET_STRING(argv[i]);
+        n = p->len << is_wide_char;
+        memcpy(d, strv(p), n);
+        d += n;
+    }
+    if (!is_wide_char)
+        *d = '\0';
+    return JS_MKPTR(JS_TAG_STRING, q);
+slow_path:
     r = JS_ToStringCheckObject(ctx, this_val);
     for (i = 0; i < argc; i++) {
         if (JS_IsException(r))
@@ -46952,27 +47009,36 @@ static JSValue js_regexp_constructor_internal(JSContext *ctx, JSValueConst ctor,
     JSValue obj;
     JSObject *p;
     JSRegExp *re;
+    JSProperty prop;
 
     /* sanity check */
     if (JS_VALUE_GET_TAG(bc) != JS_TAG_STRING ||
         JS_VALUE_GET_TAG(pattern) != JS_TAG_STRING) {
         JS_ThrowTypeError(ctx, "string expected");
-    fail:
-        JS_FreeValue(ctx, bc);
-        JS_FreeValue(ctx, pattern);
-        return JS_EXCEPTION;
-    }
-
-    obj = js_create_from_ctor(ctx, ctor, JS_CLASS_REGEXP);
-    if (JS_IsException(obj))
         goto fail;
+    }
+    prop.u.value = js_int32(0); // lastIndex
+    if (ctx->regexp_shape && JS_IsUndefined(ctor)) {
+        obj = JS_NewObjectFromShape(ctx, js_dup_shape(ctx->regexp_shape),
+                                    JS_CLASS_REGEXP, &prop);
+        if (JS_IsException(obj))
+            goto fail;
+    } else {
+        obj = js_create_from_ctor(ctx, ctor, JS_CLASS_REGEXP);
+        if (JS_IsException(obj))
+            goto fail;
+        JS_DefinePropertyValue(ctx, obj, JS_ATOM_lastIndex, prop.u.value,
+                               JS_PROP_WRITABLE);
+    }
     p = JS_VALUE_GET_OBJ(obj);
     re = &p->u.regexp;
     re->pattern = JS_VALUE_GET_STRING(pattern);
     re->bytecode = JS_VALUE_GET_STRING(bc);
-    JS_DefinePropertyValue(ctx, obj, JS_ATOM_lastIndex, js_int32(0),
-                           JS_PROP_WRITABLE);
     return obj;
+fail:
+    JS_FreeValue(ctx, bc);
+    JS_FreeValue(ctx, pattern);
+    return JS_EXCEPTION;
 }
 
 static JSRegExp *js_get_regexp(JSContext *ctx, JSValueConst obj,
@@ -48436,18 +48502,23 @@ void JS_AddIntrinsicRegExpCompiler(JSContext *ctx)
 
 void JS_AddIntrinsicRegExp(JSContext *ctx)
 {
-    JSValue obj;
+    JSValue regexp_proto, obj;
+    JSShape **psh;
 
     JS_AddIntrinsicRegExpCompiler(ctx);
-
-    ctx->class_proto[JS_CLASS_REGEXP] = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, ctx->class_proto[JS_CLASS_REGEXP], js_regexp_proto_funcs,
+    regexp_proto = ctx->class_proto[JS_CLASS_REGEXP] = JS_NewObject(ctx);
+    JS_SetPropertyFunctionList(ctx, regexp_proto, js_regexp_proto_funcs,
                                countof(js_regexp_proto_funcs));
     obj = JS_NewGlobalCConstructor(ctx, "RegExp", js_regexp_constructor, 2,
-                                   ctx->class_proto[JS_CLASS_REGEXP]);
+                                   regexp_proto);
     ctx->regexp_ctor = js_dup(obj);
     JS_SetPropertyFunctionList(ctx, obj, js_regexp_funcs, countof(js_regexp_funcs));
-
+    psh = &ctx->regexp_shape;
+    *psh = js_new_shape2(ctx, get_proto_obj(regexp_proto), JS_PROP_INITIAL_HASH_SIZE, 1);
+    if (*psh && add_shape_property(ctx, psh, NULL, JS_ATOM_lastIndex, JS_PROP_WRITABLE)) {
+        js_free_shape(ctx->rt, *psh);
+        *psh = NULL;
+    }
     ctx->class_proto[JS_CLASS_REGEXP_STRING_ITERATOR] =
         JS_NewObjectProto(ctx, ctx->class_proto[JS_CLASS_ITERATOR]);
     JS_SetPropertyFunctionList(ctx, ctx->class_proto[JS_CLASS_REGEXP_STRING_ITERATOR],
@@ -55732,6 +55803,23 @@ void JS_DetachArrayBuffer(JSContext *ctx, JSValueConst obj)
     }
 }
 
+int JS_IsImmutableArrayBuffer(JSValueConst obj)
+{
+    JSArrayBuffer *abuf = JS_GetOpaque(obj, JS_CLASS_ARRAY_BUFFER);
+    if (!abuf)
+        return -1;
+    return abuf->immutable;
+}
+
+int JS_SetImmutableArrayBuffer(JSValueConst obj, bool immutable)
+{
+    JSArrayBuffer *abuf = JS_GetOpaque(obj, JS_CLASS_ARRAY_BUFFER);
+    if (!abuf)
+        return -1;
+    abuf->immutable = immutable;
+    return 0;
+}
+
 /* get an ArrayBuffer or SharedArrayBuffer */
 static JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj)
 {
@@ -59251,10 +59339,11 @@ static const JSClassShortDef js_weakref_class_def[] = {
 
 typedef struct JSFinRecEntry {
     struct list_head link;
-    JSValueConst obj;
     JSValueConst target;
     JSValue held_val;
     JSValue token;
+    JSValue cb;
+    JSContext *ctx;
 } JSFinRecEntry;
 
 typedef struct JSFinalizationRegistryData {
@@ -59279,6 +59368,15 @@ static void delete_finrec_weakref(JSRuntime *rt, JSFinRecEntry *fre)
     js_free_rt(rt, wr);
 }
 
+static void js_finrec_free(JSRuntime *rt, JSFinRecEntry *fre)
+{
+    JS_FreeValueRT(rt, fre->held_val);
+    JS_FreeValueRT(rt, fre->token);
+    JS_FreeValueRT(rt, fre->cb);
+    JS_FreeContext(fre->ctx);
+    js_free_rt(rt, fre);
+}
+
 static void js_finrec_finalizer(JSRuntime *rt, JSValueConst val)
 {
     JSFinalizationRegistryData *frd = JS_GetOpaque(val, JS_CLASS_FINALIZATION_REGISTRY);
@@ -59294,9 +59392,7 @@ static void js_finrec_finalizer(JSRuntime *rt, JSValueConst val)
         list_for_each_safe(el, el1, &frd->entries) {
             JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
             list_del(&fre->link);
-            JS_FreeValueRT(rt, fre->held_val);
-            JS_FreeValueRT(rt, fre->token);
-            js_free_rt(rt, fre);
+            js_finrec_free(rt, fre);
         }
         JS_FreeValueRT(rt, frd->cb);
         js_free_rt(rt, frd);
@@ -59314,6 +59410,8 @@ static void js_finrec_mark(JSRuntime *rt, JSValueConst val,
             JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
             JS_MarkValue(rt, fre->held_val, mark_func);
             JS_MarkValue(rt, fre->token, mark_func);
+            JS_MarkValue(rt, fre->cb, mark_func);
+            mark_func(rt, &fre->ctx->header);
         }
     }
 }
@@ -59370,7 +59468,8 @@ static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
         js_free(ctx, fre);
         return JS_EXCEPTION;
     }
-    fre->obj = this_val;
+    fre->cb = js_dup(frd->cb);
+    fre->ctx = JS_DupContext(frd->ctx);
     fre->target = target;
     fre->held_val = js_dup(held_val);
     fre->token = js_dup(token);
@@ -59399,9 +59498,7 @@ static JSValue js_finrec_unregister(JSContext *ctx, JSValueConst this_val, int a
         if (js_same_value(ctx, fre->token, token)) {
             list_del(&fre->link);
             delete_finrec_weakref(ctx->rt, fre);
-            JS_FreeValue(ctx, fre->held_val);
-            JS_FreeValue(ctx, fre->token);
-            js_free(ctx, fre);
+            js_finrec_free(ctx->rt, fre);
             removed = true;
         }
     }
@@ -59502,20 +59599,31 @@ static void reset_weak_ref(JSRuntime *rt, JSWeakRefRecord **first_weak_ref)
             break;
         case JS_WEAK_REF_KIND_FINALIZATION_REGISTRY_ENTRY: {
             fre = wr->u.fin_rec_entry;
-            JSFinalizationRegistryData *frd = JS_GetOpaque(fre->obj, JS_CLASS_FINALIZATION_REGISTRY);
-            assert(frd != NULL);
             /**
-             * During the GC sweep phase the held object might be collected first.
+             * During the GC sweep phase the held object might be
+             * collected first (free_mark set). Also skip if the
+             * callback or held value are part of a cycle being
+             * collected (header.mark is set for objects on
+             * tmp_obj_list during gc_free_cycles).
              */
-            if (!rt->in_free && (!JS_IsObject(fre->held_val) || JS_IsLiveObject(rt, fre->held_val))) {
-                JSValueConst args[2];
-                args[0] = frd->cb;
-                args[1] = fre->held_val;
-                JS_EnqueueJob(frd->ctx, js_finrec_job, 2, args);
+            bool enqueue = !rt->in_free;
+            if (enqueue && JS_IsObject(fre->held_val)) {
+                JSObject *p = JS_VALUE_GET_OBJ(fre->held_val);
+                if (p->free_mark || p->header.mark)
+                    enqueue = false;
             }
-            JS_FreeValueRT(rt, fre->held_val);
-            JS_FreeValueRT(rt, fre->token);
-            js_free_rt(rt, fre);
+            if (enqueue && JS_IsObject(fre->cb)) {
+                JSObject *p = JS_VALUE_GET_OBJ(fre->cb);
+                if (p->free_mark || p->header.mark)
+                    enqueue = false;
+            }
+            if (enqueue) {
+                JSValueConst args[2];
+                args[0] = fre->cb;
+                args[1] = fre->held_val;
+                JS_EnqueueJob(fre->ctx, js_finrec_job, 2, args);
+            }
+            js_finrec_free(rt, fre);
             break;
         }
         default:
