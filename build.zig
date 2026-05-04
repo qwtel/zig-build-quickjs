@@ -12,10 +12,11 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{
             .target = target,
             .optimize = mode,
+            .link_libc = true,
         }),
     });
 
-    lib.addIncludePath(b.path("."));
+    lib.root_module.addIncludePath(b.path("."));
 
     const common_flags: []const []const u8 = &.{
         "-std=c11",
@@ -65,11 +66,10 @@ pub fn build(b: *std.Build) !void {
     // } else {
     // }
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .files = files,
         .flags = flags,
     });
-    lib.linkLibC();
 
     lib.root_module.addCMacro("_GNU_SOURCE", "1");
     if (target.result.os.tag == .windows) {
@@ -78,7 +78,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (target.result.os.tag != .windows and target.result.os.tag != .wasi) {
-        lib.linkSystemLibrary("pthread");
+        lib.root_module.linkSystemLibrary("pthread", .{});
     }
 
     if (mode == .Debug) {
