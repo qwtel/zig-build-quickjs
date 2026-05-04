@@ -60996,7 +60996,7 @@ JSValue _js_dataview_constructor(JSContext *ctx, JSValueConst new_target, int ar
 
 JSShapeProperty *_js_get_shape_prop(JSObject *p)
 {
-    return get_shape_prop(p->shape);
+    return p->shape->prop;
 }
 
 // bool _js_atom_is_array_index(JSContext *ctx, uint32_t *pval, JSAtom atom) {
@@ -61029,7 +61029,7 @@ int _js_get_non_index_enumerable_string_keys_excluding(JSContext *ctx,
     sh = p->shape;
 
     /* First pass: count */
-    for (i = 0, prs = get_shape_prop(sh); i < (uint32_t) sh->prop_count; i++, prs++) {
+    for (i = 0, prs = sh->prop; i < (uint32_t) sh->prop_count; i++, prs++) {
         JSAtom atom = prs->atom;
         if (atom == JS_ATOM_NULL) {
             continue;
@@ -61068,7 +61068,7 @@ int _js_get_non_index_enumerable_string_keys_excluding(JSContext *ctx,
     }
 
     uint32_t out = 0;
-    for (i = 0, prs = get_shape_prop(sh); i < (uint32_t) sh->prop_count; i++, prs++) {
+    for (i = 0, prs = sh->prop; i < (uint32_t) sh->prop_count; i++, prs++) {
         JSAtom atom = prs->atom;
         if (atom == JS_ATOM_NULL) {
             continue;
