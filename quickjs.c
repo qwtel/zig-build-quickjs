@@ -63412,19 +63412,14 @@ bool _js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
     return js_check_stack_overflow(ctx->rt, alloca_size);
 }
 
-bool _js_atom_is_string(JSContext *ctx, JSAtom v)
-{
-    return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
-}
+// bool _js_atom_is_string(JSContext *ctx, JSAtom v)
+// {
+//     return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
+// }
 
 JSValue _js_new_string8_len(JSContext *ctx, const char *buf, int len)
 {
     return js_new_string8_len(ctx, buf, len);
-}
-
-JSValue _js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len)
-{
-    return js_new_string16_len(ctx, buf, len);
 }
 
 bool _js_string_is_wide_char(const JSString *p)
@@ -63473,11 +63468,6 @@ JSBigInt *_js_bigint_from_string(JSContext *ctx, const char *str, int radix)
     return js_bigint_from_string(ctx, str, radix);
 }
 
-JSValue _js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
-{
-    return js_bigint_to_string1(ctx, val, radix);
-}
-
 JSValue _js_compact_bigint(JSContext *ctx, JSBigInt *p)
 {
     return JS_CompactBigInt(ctx, p);
@@ -63511,11 +63501,6 @@ struct JSMapState *_js_get_map_state(JSContext *ctx, JSValue obj, bool throw_err
     return NULL;
 }
 
-JSValue _js_typed_array_get_buffer(JSContext *ctx, JSValueConst this_val)
-{
-    return js_typed_array_get_buffer(ctx, this_val);
-}
-
 uint32_t _js_typed_array_get_byte_offset(JSObject *p)
 {
     return p->u.typed_array->offset;
@@ -63534,11 +63519,6 @@ JSValue _js_dataview_get_buffer(JSContext *ctx, JSValueConst this_val)
 JSValue _js_dataview_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
 {
     return js_dataview_constructor(ctx, new_target, argc, argv);
-}
-
-JSShapeProperty *_js_get_shape_prop(JSObject *p)
-{
-    return p->shape->prop;
 }
 
 // bool _js_atom_is_array_index(JSContext *ctx, uint32_t *pval, JSAtom atom) {
