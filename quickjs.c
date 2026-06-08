@@ -63463,14 +63463,14 @@ bool _js_get_object_data(JSContext *ctx, JSValue obj, JSValue *pval)
     return false;
 }
 
-JSBigInt *_js_bigint_from_string(JSContext *ctx, const char *str, int radix)
+JSBigInt *_js_bigint_new(JSContext *ctx, uint32_t len)
 {
-    return js_bigint_from_string(ctx, str, radix);
+    return js_bigint_new(ctx, len);
 }
 
-JSValue _js_compact_bigint(JSContext *ctx, JSBigInt *p)
+JSValue _js_bigint_normalize_and_compact(JSContext *ctx, JSBigInt *p)
 {
-    return JS_CompactBigInt(ctx, p);
+    return JS_CompactBigInt(ctx, js_bigint_normalize(ctx, p));
 }
 
 bool _js_is_fast_array(JSContext *ctx, JSValue obj)
