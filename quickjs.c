@@ -64820,11 +64820,6 @@ bool _js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
     return js_check_stack_overflow(ctx->rt, alloca_size);
 }
 
-// bool _js_atom_is_string(JSContext *ctx, JSAtom v)
-// {
-//     return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
-// }
-
 JSValue _js_new_string8_len(JSContext *ctx, const char *buf, int len)
 {
     return js_new_string8_len(ctx, buf, len);
@@ -64929,98 +64924,42 @@ JSValue _js_dataview_constructor(JSContext *ctx, JSValueConst new_target, int ar
     return js_dataview_constructor(ctx, new_target, argc, argv);
 }
 
-// bool _js_atom_is_array_index(JSContext *ctx, uint32_t *pval, JSAtom atom) {
-//     return JS_AtomIsArrayIndex(ctx, pval, atom);
-// }
+bool _js_atom_is_array_index(JSContext *ctx, uint32_t *pval, JSAtom atom)
+{
+    return JS_AtomIsArrayIndex(ctx, pval, atom);
+}
 
-/* Return 0 if OK, < 0 if exception.
-   Produces an array of own-enumerable string keys from the shape,
-   excluding array-index keys with idx < skip_indices_below.
-   The returned array must be freed with JS_FreePropertyEnum(). */
-int _js_get_non_index_enumerable_string_keys_excluding(JSContext *ctx,
-                                                       JSPropertyEnum **ptab,
-                                                       uint32_t *plen,
-                                                       JSValueConst obj,
-                                                       uint32_t skip_indices_below) {
-    JSObject *p;
-    JSShape *sh;
-    JSShapeProperty *prs;
-    JSPropertyEnum *tab = NULL;
-    uint32_t count = 0, i;
+const JSString *_js_atom_get_string(JSContext *ctx, JSAtom atom)
+{
+    if (__JS_AtomIsTaggedInt(atom) || JS_AtomGetKind(ctx, atom) != JS_ATOM_KIND_STRING)
+        return NULL;
+    return ctx->rt->atom_array[atom];
+}
 
-    *ptab = NULL;
-    *plen = 0;
+JSShape **_js_get_object_shape_and_prop_ptrs(JSValueConst obj,
+                                             JSProperty ***pprop_ptr,
+                                             uint8_t *pflags)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(obj);
+    *pprop_ptr = &p->prop;
+    *pflags = p->is_exotic | (p->fast_array << 1);
+    return &p->shape;
+}
 
-    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT) {
-        JS_ThrowTypeErrorNotAnObject(ctx);
-        return -1;
-    }
-    p = JS_VALUE_GET_OBJ(obj);
-    sh = p->shape;
+JSShapeProperty *_js_get_shape_prop(JSShape *shape, uint32_t *pcount)
+{
+    *pcount = shape->prop_count;
+    return get_shape_prop(shape);
+}
 
-    /* First pass: count */
-    for (i = 0, prs = get_shape_prop(sh); i < (uint32_t) sh->prop_count; i++, prs++) {
-        JSAtom atom = prs->atom;
-        if (atom == JS_ATOM_NULL) {
-            continue;
-        }
+JSShape *_js_dup_shape(JSShape *shape)
+{
+    return js_dup_shape(shape);
+}
 
-        /* Only enumerable properties */
-        if ((prs->flags & JS_PROP_ENUMERABLE) == 0) {
-            continue;
-        }
-
-        /* Raise on TDZ (match JS_GetOwnPropertyNamesInternal behavior) */
-        if (unlikely((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF)) {
-            JSVarRef *var_ref = p->prop[i].u.var_ref;
-            if (unlikely(JS_IsUninitialized(*var_ref->pvalue))) {
-                JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
-                return -1;
-            }
-        }
-
-        uint32_t idx;
-        if (JS_AtomIsArrayIndex(ctx, &idx, atom) && idx < skip_indices_below) {
-            continue;
-        }
-
-        /* Keep everything else (string keys and numeric >= threshold) */
-        count++;
-    }
-
-    if (count == 0) {
-        return 0;
-    }
-
-    tab = js_malloc(ctx, sizeof(tab[0]) * count);
-    if (!tab) {
-        return -1;
-    }
-
-    uint32_t out = 0;
-    for (i = 0, prs = get_shape_prop(sh); i < (uint32_t) sh->prop_count; i++, prs++) {
-        JSAtom atom = prs->atom;
-        if (atom == JS_ATOM_NULL) {
-            continue;
-        }
-        if ((prs->flags & JS_PROP_ENUMERABLE) == 0) {
-            continue;
-        }
-
-        uint32_t idx;
-        if (JS_AtomIsArrayIndex(ctx, &idx, atom) && idx < skip_indices_below) {
-            continue;
-        }
-
-        tab[out].atom = JS_DupAtom(ctx, atom);
-        tab[out].is_enumerable = 1;
-        out++;
-    }
-    /* out should equal count */
-
-    *ptab = tab;
-    *plen = count;
-    return 0;
+void _js_free_shape(JSContext *ctx, JSShape *shape)
+{
+    js_free_shape(ctx->rt, shape);
 }
 #endif
 
