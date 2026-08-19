@@ -64936,6 +64936,11 @@ const JSString *_js_atom_get_string(JSContext *ctx, JSAtom atom)
     return ctx->rt->atom_array[atom];
 }
 
+int _js_has_own_property(JSContext *ctx, JSValueConst obj, JSAtom atom)
+{
+    return JS_GetOwnPropertyInternal(ctx, NULL, JS_VALUE_GET_OBJ(obj), atom);
+}
+
 JSShape **_js_get_object_shape_and_prop_ptrs(JSValueConst obj,
                                              JSProperty ***pprop_ptr,
                                              uint8_t *pflags)
